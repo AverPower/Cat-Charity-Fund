@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.charity_project import CharityProjectDB
+from app.schemas.charity_project import (
+    CharityProjectDB,
+    CharityProjectCreate,
+    CharityProjectUpdate
+)
 from app.core.db import get_async_session
 from app.crud.charity_project import charity_project_crud
 
@@ -13,23 +17,66 @@ router = APIRouter()
     '/',
     response_model=list[CharityProjectDB]
 )
-def get_all_charity_projects(
+async def get_all_charity_projects(
     session: AsyncSession = Depends(get_async_session)
 ):
-    all_charity_projects = charity_project_crud.get_multi(session)
+    all_charity_projects = await charity_project_crud.get_multi(session)
     return all_charity_projects
 
 
-@router.post('/')
-def create_charity_project():
-    return {}
+@router.post(
+    '/',
+    response_model=CharityProjectDB
+)
+async def create_charity_project(
+    charity_project_data: CharityProjectCreate,
+    session: AsyncSession = Depends(get_async_session)
+):
+    new_charity_project = await charity_project_crud.create(
+        charity_project_data,
+        session
+    )
+    return new_charity_project
 
 
-@router.delete('/{project_id}')
-def delete_charity_project(project_id):
-    return {}
+@router.delete(
+    '/{project_id}',
+    response_model=CharityProjectDB
+)
+async def delete_charity_project(
+    project_id: int,
+    session: AsyncSession = Depends(get_async_session)
+):
+    # TODO - get project by id
+    charity_project_to_delete = await charity_project_crud.get(
+        project_id,
+        session
+    )
+    deleted_charity_project = await charity_project_crud.remove(
+        charity_project_to_delete,
+        session
+    )
+    return deleted_charity_project
 
 
-@router.patch('/{project_id}')
-def update_charity_project(project_id):
-    return {}
+@router.patch(
+    '/{project_id}',
+    response_model=CharityProjectDB,
+    response_model_exclude_none=True,
+)
+async def update_charity_project(
+    project_id: int,
+    obj_in: CharityProjectUpdate,
+    session: AsyncSession = Depends(get_async_session)
+):
+    # TODO - get project by id
+    charity_project_to_update = await charity_project_crud.get(
+        project_id,
+        session
+    )
+    updated_charity_project = await charity_project_crud.update(
+        charity_project_to_update,
+        obj_in,
+        session
+    )
+    return updated_charity_project
