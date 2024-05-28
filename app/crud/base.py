@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
+# from app.models.user import User
 
 from app.core.db import Base
 
@@ -42,13 +42,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             obj_in,
             session: AsyncSession,
             # Добавьте опциональный параметр user.
-            user: Optional[User] = None
+            # user: Optional[User] = None
     ):
         obj_in_data = obj_in.dict()
         # Если пользователь был передан...
-        if user is not None:
-            # ...то дополнить словарь для создания модели.
-            obj_in_data['user_id'] = user.id
+        # if user is not None:
+        #     # ...то дополнить словарь для создания модели.
+        #     obj_in_data['user_id'] = user.id
         db_obj = self.model(**obj_in_data)
         session.add(db_obj)
         await session.commit()
