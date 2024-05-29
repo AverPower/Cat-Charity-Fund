@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class DonationCreate(BaseModel):
-    full_amount: int = Field(min_length=0)
+    full_amount: int = Field(gt=0)
     comment: Optional[str] = None
 
 
