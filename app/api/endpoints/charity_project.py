@@ -8,6 +8,7 @@ from app.schemas.charity_project import (
 )
 from app.core.db import get_async_session
 from app.crud.charity_project import charity_project_crud
+from app.core.user import current_superuser
 
 
 router = APIRouter()
@@ -26,7 +27,8 @@ async def get_all_charity_projects(
 
 @router.post(
     '/',
-    response_model=CharityProjectDB
+    response_model=CharityProjectDB,
+    dependencies=[Depends(current_superuser)]
 )
 async def create_charity_project(
     charity_project_data: CharityProjectCreate,
@@ -41,7 +43,8 @@ async def create_charity_project(
 
 @router.delete(
     '/{project_id}',
-    response_model=CharityProjectDB
+    response_model=CharityProjectDB,
+    dependencies=[Depends(current_superuser)]
 )
 async def delete_charity_project(
     project_id: int,
@@ -63,6 +66,7 @@ async def delete_charity_project(
     '/{project_id}',
     response_model=CharityProjectDB,
     response_model_exclude_none=True,
+    dependencies=[Depends(current_superuser)]
 )
 async def update_charity_project(
     project_id: int,
