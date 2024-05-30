@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.donation import Donation
 from app.crud.donation import crud_donation
 from app.schemas.donation import (
     DonationCreate,
