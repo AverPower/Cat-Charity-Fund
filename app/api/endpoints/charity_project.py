@@ -21,6 +21,9 @@ router = APIRouter()
 async def get_all_charity_projects(
     session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Получает список всех проектов.
+    """
     all_charity_projects = await charity_project_crud.get_multi(session)
     return all_charity_projects
 
@@ -28,12 +31,17 @@ async def get_all_charity_projects(
 @router.post(
     '/',
     response_model=CharityProjectDB,
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def create_charity_project(
     charity_project_data: CharityProjectCreate,
     session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Только для суперюзеров.
+
+    Создает благотворительный проект.
+    """
     new_charity_project = await charity_project_crud.create(
         charity_project_data,
         session
@@ -50,6 +58,11 @@ async def delete_charity_project(
     project_id: int,
     session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Только для суперюзеров.
+
+    Удаляет проект. Нельзя удалить проект, в который уже были инвестированы средства, его можно только закрыть.
+    """
     # TODO - get project by id
     charity_project_to_delete = await charity_project_crud.get(
         project_id,
@@ -73,6 +86,11 @@ async def update_charity_project(
     obj_in: CharityProjectUpdate,
     session: AsyncSession = Depends(get_async_session)
 ):
+    """
+    Только для суперюзеров.
+
+    Закрытый проект нельзя редактировать, также нельзя установить требуемую сумму меньше уже вложенной.
+    """
     # TODO - get project by id
     charity_project_to_update = await charity_project_crud.get(
         project_id,
