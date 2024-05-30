@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, ForeignKey
 
 from app.core.db import Base
 
@@ -16,5 +16,5 @@ class Donation(Base):
     close_date — дата, когда вся сумма пожертвования была распределена по проектам; тип DateTime; добавляется
         автоматически в момент выполнения условия.
     """
-    user_id = Column(Integer)  # TODO Внешняя связь c базой User
+    user_id = Column(Integer, ForeignKey('user.id'))
     comment = Column(Text)
