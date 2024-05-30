@@ -1,9 +1,9 @@
 from sqlalchemy import Column, String, Text
 
-from app.core.db import Base
+from app.core.db import Base, ProjectMixin
 
 
-class CharityProject(Base):
+class CharityProject(Base, ProjectMixin):
     """
     id — первичный ключ;
     name — уникальное название проекта, обязательное строковое поле; допустимая длина строки — от 1 до 100 символов
@@ -16,5 +16,5 @@ class CharityProject(Base):
     create_date — дата создания проекта, тип DateTime, должно добавляться автоматически в момент создания проекта.
     close_date — дата закрытия проекта, DateTime, проставляется автоматически в момент набора нужной суммы.
     """
-    name = Column(String)
+    name = Column(String, unique=True)
     description = Column(Text)

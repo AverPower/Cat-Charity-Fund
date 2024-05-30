@@ -4,9 +4,10 @@ from pydantic import BaseModel
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User
+from sqlalchemy import func
 
 from app.core.db import Base
+from app.models.user import User
 
 ModelType = TypeVar('ModelType', bound=Base)
 CreateSchemaType = TypeVar('CreateSchemaType', bound=BaseModel)
@@ -39,13 +40,22 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def create(
             self,
-            obj_in,
+            obj_in: CreateSchemaType,
             session: AsyncSession,
-            user: Optional[User] = None
+            user: Optional[User] = None,
+            new_info: Optional[dict] = None
     ):
         obj_in_data = obj_in.dict()
+
         if user is not None:
             obj_in_data['user_id'] = user.id
+
+        if new_info:
+            obj_in_data.update(new_info)
+            if obj_in_data['full_amount'] == obj_in_data['invested_amount']:
+                obj_in_data['fully_invested'] = True
+                obj_in_data['close_date'] = obj_in_data['create_date']
+
         db_obj = self.model(**obj_in_data)
         session.add(db_obj)
         await session.commit()
@@ -76,4 +86,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     ) -> ModelType:
         await session.delete(db_obj)
         await session.commit()
+        return db_obj
+
+    async def update_invested_amount(
+            self,
+            db_obj: ModelType,
+            invested_amount: int,
+            session: AsyncSession,
+    ) -> ModelType:
+        setattr(db_obj, 'invested_amount', invested_amount)
+        if db_obj.full_amount == db_obj.invested_amount:
+            db_obj.fully_invested = True
+            db_obj.close_date = func.now()
+        session.add(db_obj)
+        await session.commit()
+        await session.refresh(db_obj)
         return db_obj

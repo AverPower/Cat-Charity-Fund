@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, Text, ForeignKey
 
-from app.core.db import Base
+from app.core.db import Base, ProjectMixin
 
 
-class Donation(Base):
+class Donation(ProjectMixin, Base):
     """
     id — первичный ключ;
     user_id — id пользователя, сделавшего пожертвование. Foreign Key на поле user.id из таблицы пользователей;

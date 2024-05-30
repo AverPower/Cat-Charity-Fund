@@ -8,7 +8,9 @@ from app.schemas.charity_project import (
 )
 from app.core.db import get_async_session
 from app.crud.charity_project import charity_project_crud
+from app.crud.donation import crud_donation
 from app.core.user import current_superuser
+from app.services.donation import donate_calculation
 
 
 router = APIRouter()
@@ -42,9 +44,26 @@ async def create_charity_project(
 
     Создает благотворительный проект.
     """
+    opened_donations = await crud_donation.get_opened_donations(session)
+    new_info = None
+    if opened_donations:
+        ids = [info[0] for info in opened_donations]
+        donate_info = [(info[1], info[2]) for info in opened_donations]
+        project_sum = charity_project_data.full_amount
+        left_sum, updated_donate_info = donate_calculation(project_sum, donate_info)
+        new_info = {'invested_amount': project_sum - left_sum}
+        for data in zip(ids, updated_donate_info):
+            update_donate = await crud_donation.get(data[0], session)
+            await crud_donation.update_invested_amount(
+                update_donate,
+                data[1][1],
+                session
+            )
+
     new_charity_project = await charity_project_crud.create(
         charity_project_data,
-        session
+        session,
+        new_info=new_info
     )
     return new_charity_project
 
