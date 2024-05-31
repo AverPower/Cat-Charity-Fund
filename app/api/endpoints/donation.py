@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.donation import crud_donation
+from app.crud.charity_project import charity_project_crud
 from app.schemas.donation import (
     DonationCreate,
     DonationDB,
     DonationAdminDB
 )
+from app.services.invest import invest
 from app.models.user import User
 from app.core.db import get_async_session
 from app.core.user import current_superuser, current_user
@@ -44,7 +46,9 @@ async def create_donation(
     Сделать пожертвование.
 
     """
-    new_donation = await crud_donation.create(
+    new_donation = await invest(
+        crud_donation,
+        charity_project_crud,
         donation_obj,
         session,
         user

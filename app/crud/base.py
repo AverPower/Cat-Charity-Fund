@@ -1,6 +1,7 @@
 from typing import Generic, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel
+from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,20 +44,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             obj_in: CreateSchemaType,
             session: AsyncSession,
             user: Optional[User] = None,
-            new_info: Optional[dict] = None
+            invested_amount: Optional[int] = None
     ):
         obj_in_data = obj_in.dict()
 
         if user is not None:
             obj_in_data['user_id'] = user.id
 
-        if new_info:
-            obj_in_data.update(new_info)
-            if obj_in_data['full_amount'] == obj_in_data['invested_amount']:
-                obj_in_data['fully_invested'] = True
-                obj_in_data['close_date'] = obj_in_data['create_date']
-
         db_obj = self.model(**obj_in_data)
+        if invested_amount is not None:
+            self.update_object(db_obj, invested_amount)
         session.add(db_obj)
         await session.commit()
         await session.refresh(db_obj)
@@ -68,6 +65,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             obj_in: UpdateSchemaType,
             session: AsyncSession,
     ) -> ModelType:
+        if db_obj.fully_invested:
+            raise HTTPException(
+                status_code=404,
+                detail='Нельзя редактировать закрытый проект!'
+            )
         obj_data = jsonable_encoder(db_obj)
         update_data = obj_in.dict(exclude_unset=True)
 
@@ -84,21 +86,62 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             db_obj: ModelType,
             session: AsyncSession,
     ) -> ModelType:
+        if db_obj.invested_amount:
+            db_obj.fully_invested = True
+            session.add()
+            await session.commit()
+            await session.refresh(db_obj)
+            return db_obj
         await session.delete(db_obj)
         await session.commit()
         return db_obj
 
     async def update_invested_amount(
             self,
-            db_obj: ModelType,
+            obj_id: int,
             invested_amount: int,
             session: AsyncSession,
     ) -> ModelType:
-        setattr(db_obj, 'invested_amount', invested_amount)
-        if db_obj.full_amount == db_obj.invested_amount:
-            db_obj.fully_invested = True
-            db_obj.close_date = func.now()
+        db_obj = await self.get(obj_id, session)
+        db_obj = self.update_object(db_obj, invested_amount)
         session.add(db_obj)
         await session.commit()
         await session.refresh(db_obj)
         return db_obj
+
+    @staticmethod
+    def update_object(db_obj: ModelType, invested_amount: int):
+        setattr(db_obj, 'invested_amount', invested_amount)
+        if db_obj.full_amount == db_obj.invested_amount:
+            db_obj.fully_invested = True
+            db_obj.close_date = func.now()
+        return db_obj
+
+    async def get_user_objects(
+        self,
+        session: AsyncSession,
+        user: User
+    ):
+        objects = await session.execute(
+            select(ModelType).where(
+                ModelType.user_id == User.id
+            )
+        )
+        objects = objects.scalars().all()
+        return objects
+
+    async def get_opened_objects(
+        self,
+        session: AsyncSession
+    ) -> list[Optional[ModelType]]:
+        opened_objects = await session.execute(
+            select(
+                self.model.id,
+                self.model.full_amount,
+                self.model.invested_amount,
+            ).where(
+                self.model.fully_invested == 0
+            ).order_by(self.model.create_date.asc())
+        )
+        opened_objects = opened_objects.all()
+        return opened_objects
